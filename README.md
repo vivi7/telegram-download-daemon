@@ -29,18 +29,19 @@ Obtain your own api id: https://core.telegram.org/api/obtaining_api_id
 
 You need to configure these values:
 
-| Environment Variable     | Command Line argument | Description                                                  | Default Value       |
-|--------------------------|:-----------------------:|--------------------------------------------------------------|---------------------|
-| `TELEGRAM_DAEMON_API_ID`   | `--api-id`              | api_id from https://core.telegram.org/api/obtaining_api_id   |                     |
-| `TELEGRAM_DAEMON_API_HASH` | `--api-hash`            | api_hash from https://core.telegram.org/api/obtaining_api_id |                     |
-| `TELEGRAM_DAEMON_DEST`     | `--dest`                | Destination path for downloaded files                       | `/telegram-downloads` |
-| `TELEGRAM_DAEMON_TEMP`     | `--temp`                | Destination path for temporary (download in progress) files                       | use --dest |
-| `TELEGRAM_DAEMON_CHANNEL`  | `--channel`             | Channel id to download from it                               |                     |
-| `TELEGRAM_DAEMON_DUPLICATES`  | `--duplicates`             | What to do with duplicated files: ignore, overwrite or rename them | rename                     |
+| Environment Variable         | Command Line argument     | Description                                                        | Default Value         |
+| --------------------------   | :-----------------------: | --------------------------------------------------------------     | --------------------- |
+| `TELEGRAM_DAEMON_API_ID`     | `--api-id`                | api_id from https://core.telegram.org/api/obtaining_api_id         |                       |
+| `TELEGRAM_DAEMON_API_HASH`   | `--api-hash`              | api_hash from https://core.telegram.org/api/obtaining_api_id       |                       |
+| `TELEGRAM_DAEMON_DEST`       | `--dest`                  | Destination path for downloaded files                              | `/telegram-downloads` |
+| `TELEGRAM_DAEMON_TEMP`       | `--temp`                  | Destination path for temporary (download in progress) files        | use --dest            |
+| `TELEGRAM_DAEMON_CHANNEL`    | `--channel`               | Channel id to download from it                                     |                       |
+| `TELEGRAM_DAEMON_BOT_TOKEN`  | `--bot_token`             | ot token added in the channel to allow it to download files        |                       |
+| `TELEGRAM_DAEMON_DUPLICATES` | `--duplicates`            | What to do with duplicated files: ignore, overwrite or rename them | rename                |
 
 You can define them as Environment Variables, or put them as a command line arguments, for example:
 
-    python telegram-download-daemon.py --api-id <your-id> --api-hash <your-hash> --channel <channel-number>
+    python telegram-download-daemon.py --api-id <your-id> --api-hash <your-hash> --channel <channel-number> --bot_token <bot_token>
 
 
 Finally, resend any file link to the channel to start the downloading. This daemon can manage many downloads simultaneously.

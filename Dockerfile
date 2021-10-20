@@ -1,16 +1,6 @@
 FROM python:3.6
 
-COPY *.py /
+COPY ./app/*.* /app/
+RUN pip install -r /app/requirements.txt
 
-RUN echo $TARGETPLATFORM
-
-RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-    which lsb_release \
-    lsb_release -a \
-    mv /usr/bin/lsb_release /usr/bin/lsb_release.bak \
-    pip install telethon; \
-  else \
-    pip install telethon cryptg; \
-  fi
-
-CMD [ "python", "./telegram-download-daemon.py" ]
+ENTRYPOINT [ "python", "./app/telegram-download-daemon.py" ]

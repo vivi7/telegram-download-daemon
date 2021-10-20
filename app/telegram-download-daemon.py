@@ -14,6 +14,7 @@ import os.path
 from mimetypes import guess_extension
 
 from sessionManager import getSession, saveSession
+from youtubeManager import downloadYoutubeVideo, isYoutubeVideo, extractUrl
 
 from telethon import TelegramClient, events
 from telethon.tl.types import PeerChannel, DocumentAttributeFilename, DocumentAttributeVideo
@@ -26,12 +27,12 @@ import multiprocessing
 import argparse
 import asyncio
 
-
-TDD_VERSION="1.12"
+TDD_VERSION="1.20"
 
 TELEGRAM_DAEMON_API_ID = getenv("TELEGRAM_DAEMON_API_ID")
 TELEGRAM_DAEMON_API_HASH = getenv("TELEGRAM_DAEMON_API_HASH")
 TELEGRAM_DAEMON_CHANNEL = getenv("TELEGRAM_DAEMON_CHANNEL")
+TELEGRAM_DAEMON_BOT_TOKEN = getenv("TELEGRAM_DAEMON_BOT_TOKEN")
 
 TELEGRAM_DAEMON_SESSION_PATH = getenv("TELEGRAM_DAEMON_SESSION_PATH")
 
@@ -80,6 +81,14 @@ parser.add_argument(
     'Channel id to download from it (default is TELEGRAM_DAEMON_CHANNEL env var'
 )
 parser.add_argument(
+    "--bot_token",
+    required=TELEGRAM_DAEMON_BOT_TOKEN == None,
+    type=str,
+    default=TELEGRAM_DAEMON_BOT_TOKEN,
+    help=
+    'Bot token added in the channel to allow it to download files (default is TELEGRAM_DAEMON_BOT_TOKEN env var'
+)
+parser.add_argument(
     "--duplicates",
     choices=["ignore", "rename", "overwrite"],
     type=str,
@@ -92,6 +101,7 @@ args = parser.parse_args()
 api_id = args.api_id
 api_hash = args.api_hash
 channel_id = args.channel
+bot_token = args.bot_token
 downloadFolder = args.dest
 tempFolder = args.temp
 duplicates=args.duplicates
@@ -109,6 +119,7 @@ proxy = None
 # End of interesting parameters
 
 async def sendHelloMessage(client, peerChannel):
+    # dialogs = await client.get_dialogs()
     entity = await client.get_entity(peerChannel)
     print("Telegram Download Daemon "+TDD_VERSION)
     await client.send_message(entity, "Telegram Download Daemon "+TDD_VERSION)
@@ -118,6 +129,7 @@ async def sendHelloMessage(client, peerChannel):
 async def log_reply(message, reply):
     print(reply)
     await message.edit(reply)
+    # await message.reply(reply)
 
 def getRandomId(len):
     chars=string.ascii_lowercase + string.digits
@@ -128,6 +140,8 @@ def getFilename(event: events.NewMessage.Event):
 
     if hasattr(event.media, 'photo'):
         mediaFileName = str(event.media.photo.id)+".jpeg"
+    elif hasattr(event.media, 'webpage'):
+        mediaFileName = str(event.media.webpage.id)+".web"
     elif hasattr(event.media, 'document'):
         for attribute in event.media.document.attributes:
             if isinstance(attribute, DocumentAttributeFilename): 
@@ -157,7 +171,7 @@ async def set_progress(filename, message, received, total):
         return
     percentage = math.trunc(received / total * 10000) / 100
 
-    progress_message= "{0} % ({1} / {2})".format(percentage, received, total)
+    progress_message= "{0}\n{1} % ({2} / {3})".format(filename, percentage, received, total)
     in_progress[filename] = progress_message
 
     currentTime=time.time()
@@ -165,9 +179,29 @@ async def set_progress(filename, message, received, total):
         await log_reply(message, progress_message)
         lastUpdate=currentTime
 
+def exec_command(command):
+    output = "Unknown command"
+    if command == "list":
+        output = subprocess.run(["ls -l "+downloadFolder], shell=True, stdout=subprocess.PIPE,stderr=subprocess.STDOUT).stdout.decode('utf-8')
+    elif command == "clean":
+        output = "Cleaning "+tempFolder+"\n"
+        output+=subprocess.run(["rm "+tempFolder+"/*."+TELEGRAM_DAEMON_TEMP_SUFFIX], shell=True, stdout=subprocess.PIPE,stderr=subprocess.STDOUT).stdout
+    elif command == "status":
+        try:
+            output = "".join([ "{0}: {1}\n".format(key,value) for (key, value) in in_progress.items()])
+            if output: 
+                output = "Active downloads:\n\n" + output
+            else: 
+                output = "No active downloads"
+        except:
+            output = "Some error occured while checking the status. Retry."
+    else:
+        output = "Available commands: statusdebug, debug, list, clean, status"
+    
+    return output
 
-with TelegramClient(getSession(), api_id, api_hash,
-                    proxy=proxy).start() as client:
+
+with TelegramClient(getSession(), api_id, api_hash, proxy=proxy).start(bot_token=bot_token) as client:
 
     saveSession(client.session)
 
@@ -181,31 +215,14 @@ with TelegramClient(getSession(), api_id, api_hash,
             return
 
         print(event)
+        print('\n\n')
         
         try:
 
             if not event.media and event.message:
-                command = event.message.message
-                command = command.lower()
-                output = "Unknown command"
-
-                if command == "list":
-                    output = subprocess.run(["ls -l "+downloadFolder], shell=True, stdout=subprocess.PIPE,stderr=subprocess.STDOUT).stdout.decode('utf-8')
-                elif command == "status":
-                    try:
-                        output = "".join([ "{0}: {1}\n".format(key,value) for (key, value) in in_progress.items()])
-                        if output: 
-                            output = "Active downloads:\n\n" + output
-                        else: 
-                            output = "No active downloads"
-                    except:
-                        output = "Some error occured while checking the status. Retry."
-                elif command == "clean":
-                    output = "Cleaning "+tempFolder+"\n"
-                    output+=subprocess.run(["rm "+tempFolder+"/*."+TELEGRAM_DAEMON_TEMP_SUFFIX], shell=True, stdout=subprocess.PIPE,stderr=subprocess.STDOUT).stdout
-                else:
-                    output = "Available commands: list, status, clean"
-
+                command = event.message.message.lower()
+                output = exec_command(command)
+                
                 await log_reply(event, output)
 
             if event.media:
@@ -216,11 +233,43 @@ with TelegramClient(getSession(), api_id, api_hash,
                     else:
                         message=await event.reply("{0} added to queue".format(filename))
                         await queue.put([event, message])
+                elif hasattr(event.media, 'webpage'):
+                    url = extractUrl(event.message.message)
+                    if isYoutubeVideo(url):
+                        message=await event.reply("{0} is downloading".format(url))
+                        await queue.put([event, message, url])
+                    else:
+                        message=await event.reply("That is not downloadable. Try to send it as a file.")
                 else:
                     message=await event.reply("That is not downloadable. Try to send it as a file.")
 
         except Exception as e:
                 print('Events handler error: ', e)
+
+    async def downloadFile(event, message):
+        filename=getFilename(event)
+        fileName, fileExtension = os.path.splitext(filename)
+        tempfilename=fileName+"-"+getRandomId(8)+fileExtension
+
+        if path.exists("{0}/{1}.{2}".format(tempFolder,tempfilename,TELEGRAM_DAEMON_TEMP_SUFFIX)) or path.exists("{0}/{1}".format(downloadFolder,filename)):
+            if duplicates == "rename":
+                filename=tempfilename
+
+        if hasattr(event.media, 'photo'):
+            size = 0
+        else: 
+            size=event.media.document.size
+
+        await log_reply(message, "Downloading file {0} ({1} bytes)".format(filename,size))
+        download_callback = lambda received, total: set_progress(filename, message, received, total)
+        await client.download_media(event.message, "{0}/{1}.{2}".format(tempFolder,filename,TELEGRAM_DAEMON_TEMP_SUFFIX), progress_callback = download_callback)
+        set_progress(filename, message, 100, 100)
+        move("{0}/{1}.{2}".format(tempFolder,filename,TELEGRAM_DAEMON_TEMP_SUFFIX), "{0}/{1}".format(downloadFolder,filename))
+        return filename
+
+    async def downloadFromLink(event, message, url):
+        downloadYoutubeVideo(url, downloadFolder)
+        return url
 
     async def worker():
         while True:
@@ -229,32 +278,12 @@ with TelegramClient(getSession(), api_id, api_hash,
                 event=element[0]
                 message=element[1]
 
-                filename=getFilename(event)
-                fileName, fileExtension = os.path.splitext(filename)
-                tempfilename=fileName+"-"+getRandomId(8)+fileExtension
+                if hasattr(event.media, 'document') or hasattr(event.media,'photo'):
+                    filename = await downloadFile(event, message)
+                elif hasattr(event.media, 'webpage'):
+                    filename = await downloadFromLink(event, message, element[2])
 
-                if path.exists("{0}/{1}.{2}".format(tempFolder,tempfilename,TELEGRAM_DAEMON_TEMP_SUFFIX)) or path.exists("{0}/{1}".format(downloadFolder,filename)):
-                    if duplicates == "rename":
-                       filename=tempfilename
-
- 
-                if hasattr(event.media, 'photo'):
-                   size = 0
-                else: 
-                   size=event.media.document.size
-
-                await log_reply(
-                    message,
-                    "Downloading file {0} ({1} bytes)".format(filename,size)
-                )
-
-                download_callback = lambda received, total: set_progress(filename, message, received, total)
-
-                await client.download_media(event.message, "{0}/{1}.{2}".format(tempFolder,filename,TELEGRAM_DAEMON_TEMP_SUFFIX), progress_callback = download_callback)
-                set_progress(filename, message, 100, 100)
-                move("{0}/{1}.{2}".format(tempFolder,filename,TELEGRAM_DAEMON_TEMP_SUFFIX), "{0}/{1}".format(downloadFolder,filename))
                 await log_reply(message, "{0} ready".format(filename))
-
                 queue.task_done()
             except Exception as e:
                 try: await log_reply(message, "Error: {}".format(str(e))) # If it failed, inform the user about it.
@@ -262,7 +291,6 @@ with TelegramClient(getSession(), api_id, api_hash,
                 print('Queue worker error: ', e)
  
     async def start():
-
         tasks = []
         loop = asyncio.get_event_loop()
         for i in range(worker_count):

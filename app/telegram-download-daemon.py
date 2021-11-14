@@ -14,7 +14,8 @@ import os.path
 from mimetypes import guess_extension
 
 from sessionManager import getSession, saveSession
-from youtubeManager import downloadYoutubeVideo, isYoutubeVideo, extractUrl
+from youtubeManager import downloadYoutubeVideo, isYoutubeVideo
+from scrubberManager import containsUrl, extractUrl, downloadFileFromUrl
 
 from telethon import TelegramClient, events
 from telethon.tl.types import PeerChannel, DocumentAttributeFilename, DocumentAttributeVideo
@@ -27,7 +28,7 @@ import multiprocessing
 import argparse
 import asyncio
 
-TDD_VERSION="1.20"
+TDD_VERSION="1.30"
 
 TELEGRAM_DAEMON_API_ID = getenv("TELEGRAM_DAEMON_API_ID")
 TELEGRAM_DAEMON_API_HASH = getenv("TELEGRAM_DAEMON_API_HASH")
@@ -218,30 +219,23 @@ with TelegramClient(getSession(), api_id, api_hash, proxy=proxy).start(bot_token
         print('\n\n')
         
         try:
-
-            if not event.media and event.message:
+            if hasattr(event.media, 'document') or hasattr(event.media,'photo'):
+                filename=getFilename(event)
+                if ( path.exists("{0}/{1}.{2}".format(tempFolder,filename,TELEGRAM_DAEMON_TEMP_SUFFIX)) or path.exists("{0}/{1}".format(downloadFolder,filename)) ) and duplicates == "ignore":
+                    message=await event.reply("{0} already exists. Ignoring it.".format(filename))
+                else:
+                    message=await event.reply("{0} added to queue".format(filename))
+                    await queue.put([event, message])
+            elif hasattr(event.media, 'webpage') or containsUrl(event.message.message):
+                url = extractUrl(event.message.message)
+                message=await event.reply("{0} is downloading".format(url))
+                await queue.put([event, message, url])
+            else:
                 command = event.message.message.lower()
                 output = exec_command(command)
                 
                 await log_reply(event, output)
-
-            if event.media:
-                if hasattr(event.media, 'document') or hasattr(event.media,'photo'):
-                    filename=getFilename(event)
-                    if ( path.exists("{0}/{1}.{2}".format(tempFolder,filename,TELEGRAM_DAEMON_TEMP_SUFFIX)) or path.exists("{0}/{1}".format(downloadFolder,filename)) ) and duplicates == "ignore":
-                        message=await event.reply("{0} already exists. Ignoring it.".format(filename))
-                    else:
-                        message=await event.reply("{0} added to queue".format(filename))
-                        await queue.put([event, message])
-                elif hasattr(event.media, 'webpage'):
-                    url = extractUrl(event.message.message)
-                    if isYoutubeVideo(url):
-                        message=await event.reply("{0} is downloading".format(url))
-                        await queue.put([event, message, url])
-                    else:
-                        message=await event.reply("That is not downloadable. Try to send it as a file.")
-                else:
-                    message=await event.reply("That is not downloadable. Try to send it as a file.")
+                message=await event.reply("That is not downloadable. {0}".format(output))
 
         except Exception as e:
                 print('Events handler error: ', e)
@@ -268,7 +262,10 @@ with TelegramClient(getSession(), api_id, api_hash, proxy=proxy).start(bot_token
         return filename
 
     async def downloadFromLink(event, message, url):
-        downloadYoutubeVideo(url, downloadFolder)
+        if isYoutubeVideo(url):
+            return downloadYoutubeVideo(url, downloadFolder)
+        else:
+            return downloadFileFromUrl(url, downloadFolder)
         return url
 
     async def worker():
@@ -280,7 +277,7 @@ with TelegramClient(getSession(), api_id, api_hash, proxy=proxy).start(bot_token
 
                 if hasattr(event.media, 'document') or hasattr(event.media,'photo'):
                     filename = await downloadFile(event, message)
-                elif hasattr(event.media, 'webpage'):
+                elif hasattr(event.media, 'webpage') or containsUrl(element[2]):
                     filename = await downloadFromLink(event, message, element[2])
 
                 await log_reply(message, "{0} ready".format(filename))

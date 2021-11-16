@@ -1,4 +1,4 @@
-cffi==1.14.0
+cffi==1.15.0
 cryptg==0.2.post0
 pyaes==1.6.1
 pyasn1==0.4.8
@@ -9,5 +9,4 @@ pytube==11.0.1
 requests==2.26.0
 clint==0.5.1
 lxml==4.6.3
-bs4==0.0.1
 beautifulsoup4==4.10.0

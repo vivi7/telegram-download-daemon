@@ -1,10 +1,8 @@
 # telegram-download-daemon
 
-A Telegram Daemon (not a bot) for file downloading automation 
+A Telegram Daemon (not a bot) for file downloading automation
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E03K0RP)
-
-If you have got an Internet connected computer or NAS and you want to automate file downloading from Telegram channels, this
+If you have got an Internet connected computer or NAS and you want to automate "FILES, YOUTUBE, MEGA folder and file and LINK" downloading from Telegram channels, this
 daemon is for you. 
 
 Telegram bots are limited to 20Mb file size downloads. So I wrote this agent
@@ -12,11 +10,11 @@ or daemon to allow bigger downloads (limited to 2GB by Telegram APIs).
 
 # Installation
 
-You need Python3 (3.6 works fine, 3.5 will crash randomly).
+You need Python3 (3.6 or more).
 
-Install dependencies by running this command:
+Install dependencies by running those commands:
 
-    pip install -r requirements.txt
+    pip install -r app/requirements.txt
 
 (If you don't want to install `cryptg` and its dependencies, you just need to install `telethon`)
 
@@ -33,15 +31,15 @@ You need to configure these values:
 | --------------------------   | :-----------------------: | --------------------------------------------------------------     | --------------------- |
 | `TELEGRAM_DAEMON_API_ID`     | `--api-id`                | api_id from https://core.telegram.org/api/obtaining_api_id         |                       |
 | `TELEGRAM_DAEMON_API_HASH`   | `--api-hash`              | api_hash from https://core.telegram.org/api/obtaining_api_id       |                       |
-| `TELEGRAM_DAEMON_DEST`       | `--dest`                  | Destination path for downloaded files                              | `/telegram-downloads` |
-| `TELEGRAM_DAEMON_TEMP`       | `--temp`                  | Destination path for temporary (download in progress) files        | use --dest            |
 | `TELEGRAM_DAEMON_CHANNEL`    | `--channel`               | Channel id to download from it                                     |                       |
 | `TELEGRAM_DAEMON_BOT_TOKEN`  | `--bot_token`             | ot token added in the channel to allow it to download files        |                       |
+| `TELEGRAM_DAEMON_DEST`       | `--dest`                  | Destination path for downloaded files                              | `/telegram-downloads` |
+| `TELEGRAM_DAEMON_TEMP`       | `--temp`                  | Destination path for temporary (download in progress) files        | use --dest + /TEMP    |
 | `TELEGRAM_DAEMON_DUPLICATES` | `--duplicates`            | What to do with duplicated files: ignore, overwrite or rename them | rename                |
 
 You can define them as Environment Variables, or put them as a command line arguments, for example:
 
-    python telegram-download-daemon.py --api-id <your-id> --api-hash <your-hash> --channel <channel-number> --bot_token <bot_token>
+    python telegram_download_daemon.py --api-id <your-id> --api-hash <your-hash> --channel <channel-number> --bot_token <bot_token>
 
 
 Finally, resend any file link to the channel to start the downloading. This daemon can manage many downloads simultaneously.
@@ -55,7 +53,7 @@ You can also 'talk' to this daemon using your Telegram client:
 
 # Docker
 
-`docker pull alfem/telegram-download-daemon`
+`docker pull vivi7/telegram-download-daemon`
 
 When we use the [`TelegramClient`](https://docs.telethon.dev/en/latest/quick-references/client-reference.html#telegramclient) method, it requires us to interact with the `Console` to give it our phone number and confirm with a security code.
 

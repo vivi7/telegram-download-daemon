@@ -10,6 +10,7 @@ services:
       TELEGRAM_DAEMON_CHANNEL: "YOUR CHANNEL ID HERE"
       TELEGRAM_DAEMON_BOT_TOKEN: "YOUR BOT TOKEN HERE"
       TELEGRAM_DAEMON_DEST: "/downloads"
+      TELEGRAM_DAEMON_TEMP: "/temp"
       TELEGRAM_DAEMON_SESSION_PATH: "/session"
     volumes:
        - downloads:/downloads

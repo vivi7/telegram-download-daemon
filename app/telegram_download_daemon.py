@@ -11,7 +11,7 @@ from mimetypes import guess_extension
 
 from utility_manager import get_random_id, get_current_timestamp, exec_subprocess_cmd
 from session_manager import get_session, save_session
-from youtube_manager import is_youtube_url, download_youtube_video
+from youtube_manager import is_youtube_url, download_youtube_url
 from mega_manager import is_mega_url, download_mega_url
 from scrubber_manager import contains_url, extract_urls, download_file_from_url
 
@@ -284,7 +284,7 @@ with TelegramClient(get_session(), api_id, api_hash, proxy=proxy).start(bot_toke
 
     async def donload_file_from_url(event, message, url):
         if is_youtube_url(url):
-            return download_youtube_video(url, download_folder)
+            return download_youtube_url(url, download_folder)
         elif is_mega_url(url):
             return download_mega_url(url, download_folder)
         else:
@@ -308,7 +308,9 @@ with TelegramClient(get_session(), api_id, api_hash, proxy=proxy).start(bot_toke
 # if __name__ == "__main__":
 #     text = """
 #         test message for urls:
-#         http://www.youtube.com/watch?v=5Y6HSHwhVlY
+#         https://www.youtube.com/watch?v=begIGODDmAg
+#         https://www.youtube.com/watch?v=dxUCNtYiO4w&list=PL2z49XO_S151cFwtdzgcOFDYzuI2nGqlZ
+#         https://www.youtube.com/channel/UC5fmXZRQS-6xa2kCbCQds8g
 #         http://youtu.be/5Y6HSHwhVlY
 #         http://www.youtube.com/embed/5Y6HSHwhVlY?rel=0" frameborder="0"
 #         https://www.youtube-nocookie.com/v/5Y6HSHwhVlY?version=3&amp;hl=en_US

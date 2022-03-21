@@ -30,6 +30,7 @@ jobs:
     - name: Send greeting
       run: |
         echo "Hello ${{ github.event.inputs.name }}"
+        echo "github.repository: ${{github.repository}}"
         echo "GITHUB_ACTION: ${{ env.GITHUB_ACTION}}"
         echo "GITHUB_ACTION_PATH: ${{ env.GITHUB_ACTION_PATH}}"
         echo "GITHUB_ACTION_REPOSITORY: ${{ env.GITHUB_ACTION_REPOSITORY}}"

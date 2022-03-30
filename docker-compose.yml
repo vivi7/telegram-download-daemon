@@ -1,22 +1,30 @@
-version: '3.5'
+version: '3.9'
 
 services:
   telegram-download-daemon:
-    build: .
-    image: telegram-download-daemon:latest
+    container_name: telegram-download-daemon
+    image: vivi7/telegram-download-daemon:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '0.60'
+          memory: 2048M
+        reservations:
+          cpus: '0.02'
+          memory: 16M
     environment:
       TELEGRAM_DAEMON_API_ID: "YOUR API ID HERE"
       TELEGRAM_DAEMON_API_HASH: "YOUR API HASH HERE"
       TELEGRAM_DAEMON_CHANNEL: "YOUR CHANNEL ID HERE"
       TELEGRAM_DAEMON_BOT_TOKEN: "YOUR BOT TOKEN HERE"
-      TELEGRAM_DAEMON_DEST: "/downloads"
-      TELEGRAM_DAEMON_TEMP: "/temp"
-      TELEGRAM_DAEMON_SESSION_PATH: "/session"
+      TELEGRAM_DAEMON_DEST: "/telegram-downloads"
     volumes:
-       - downloads:/downloads
-       - sessions:/session
+       - ./downloads:/telegram-downloads:rw
+       - ./temp:/telegram-temp:rw
+       - ./sessions:/telegram-session:rw
     restart: unless-stopped
 
 volumes:
-    downloads:
-    sessions:
+  downloads:
+  temp:
+  sessions:

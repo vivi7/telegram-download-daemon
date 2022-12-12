@@ -1,3 +1,5 @@
+import logging
+
 import pytube
 from pytube import Playlist
 from pytube import Channel
@@ -8,8 +10,20 @@ from util.string_utility import StringUtility
 class YoutubeService:
 
 
+    def on_progress_callback(self, stream, chunk, bytes_remaining):
+        logging.info(f"{0}% in progress...".format(round((1-bytes_remaining/stream.filesize)*100, 3)))
+    
+    
+    def on_complete_callback(self, stream, file_path):
+        logging.info(f"{0} 100% done".format(file_path))
+
+
     def _get_video(self, url):
-        youtube = pytube.YouTube(url)
+        youtube = pytube.YouTube(
+            url, 
+            on_progress_callback=self.on_progress_callback,
+            on_complete_callback=self.on_complete_callback
+        )
         video = youtube.streams.get_highest_resolution()
         return video
 
@@ -20,14 +34,7 @@ class YoutubeService:
             "(youtube|youtu|youtube-nocookie)\.(com|be)/"
             "(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})"
         )
-        return StringUtility().match_text(regex, url)
-        # try:
-        #     video_id=pytube.extract.video_id(url)
-        #     print(f'ID: {video_id}')
-        #     return True
-        # except:
-        #     print(url, "is not a youtube video")
-        #     return False
+        return StringUtility.match_text(regex, url)
 
 
     def download(self, url, dest):
@@ -42,7 +49,6 @@ class YoutubeService:
     def download_video(self, url, dest):
         video = self._get_video(url)
         video.download(dest)
-        print("DOWNLOADED " + video.title)
         return video.title
 
 

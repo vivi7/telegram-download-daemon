@@ -7,7 +7,7 @@ class MegaService:
 
     def match(self, url):
         regex = r"(?P<url>https?://mega.nz/(folder|file)/[^\s]+)"
-        return StringUtility().match_text(regex, url)
+        return StringUtility.match_text(regex, url)
 
 
     def download(self, url, dest):

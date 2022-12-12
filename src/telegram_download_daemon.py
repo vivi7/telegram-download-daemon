@@ -30,10 +30,10 @@ from usecases.download_usecase import DownloadUsecase
 
 from adapters.parser_adapter import ParserAdapter
 
-TDD_VERSION = "5.0"
+TDD_VERSION = "5.1"
 TELEGRAM_DAEMON_TEMP_SUFFIX = "tdd"
 
-print("Telegram Download Daemon " + TDD_VERSION)
+logging.info("Telegram Download Daemon " + TDD_VERSION)
 
 parser_adapter = ParserAdapter()
 args = parser_adapter.get_args()
@@ -246,7 +246,7 @@ with TelegramClient(session_service.get(), api_id, api_hash, proxy=None).start(b
                     message = await event.reply("That is not downloadable. {0}".format(output))
 
         except Exception as e:
-            print(traceback.format_exc())
+            logging.error(traceback.format_exc())
 
     async def worker():
         while True:
@@ -260,7 +260,7 @@ with TelegramClient(session_service.get(), api_id, api_hash, proxy=None).start(b
                 elif hasattr(event.media, "webpage") or StringUtility.contains_url(element[2]):
                     filename = await download_usecase.donload_file_from_url(element[2], download_folder)
                 else:
-                    print("This is not possible to happen, check elements:", element)
+                    logging.error("This is not possible to happen, check elements:", element)
 
                 await log_reply(message, "{0} ready".format(filename))
                 queue.task_done()
@@ -269,7 +269,7 @@ with TelegramClient(session_service.get(), api_id, api_hash, proxy=None).start(b
                     await log_reply(message, "Error: {}".format(str(e)))
                 except:
                     pass
-                print(traceback.format_exc())
+                logging.error(traceback.format_exc())
 
     async def start():
         tasks = []
